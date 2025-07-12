@@ -8,13 +8,17 @@ from selenium.webdriver.support import expected_conditions as EC
 import re
 
 TARGET_CITIES = {
-    "pune": {"categories": ["cafes", "parks"]},
-    "mumbai": {"categories": ["cafes", "bars"]},
-    "bangalore": {"categories": ["cafes", "bookstores"]}
+    "pune": {"categories": ["cafes", "parks", "bars", "bookstores", "historic places", "restaurants"]},
+    "mumbai": {"categories": ["cafes", "parks", "bars", "bookstores", "historic places", "beach"]},
+    "bangalore": {"categories": ["cafes", "parks", "bars", "bookstores", "historic places"]},
+    "delhi": {"categories": ["cafes", "parks", "bars", "bookstores", "historic places"]},
+    "noida": {"categories": ["cafes", "parks", "bars", "bookstores", "historic places"]},
+    "goa": {"categories": ["cafes", "parks", "bars", "bookstores", "historic places", "beach"]},
 }
+
 LOCATIONS_PER_CATEGORY = 5
-REVIEWS_PER_LOCATION = 20
-OUTPUT_FILE = "seed_data.json"
+REVIEWS_PER_LOCATION = 15
+OUTPUT_FILE = "data.json"
 
 def get_driver():
     options = webdriver.ChromeOptions()

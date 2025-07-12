@@ -1,7 +1,7 @@
 import google.generativeai as genai
 import os
 from dotenv import load_dotenv
-from typing import List, Dict
+from typing import List, Dict, Optional
 from bson import ObjectId
 from pinecone import Pinecone
 
@@ -23,29 +23,51 @@ pinecone_index = pc.Index(PINECONE_INDEX_NAME)
 EMBEDDING_MODEL = "models/embedding-001"
 GENERATION_MODEL = "gemini-1.5-flash-latest"
 
-async def find_relevant_reviews_with_pinecone(query: str, top_k: int = 5) -> List[Dict]:
+async def find_relevant_reviews_with_pinecone(
+    query: str,
+    city: str,
+    category: Optional[str] = None,
+    top_k: int = 5
+) -> List[Dict]:
 
-    response = genai.embed_content(
-        model=EMBEDDING_MODEL,
-        content=query,
-        task_type="RETRIEVAL_QUERY"
-    )
-    query_embedding = response['embedding']
+    # 1. Embed the user query with Gemini
+    try:
+        embed_response = genai.embed_content(
+            model=EMBEDDING_MODEL,
+            content=query,
+            task_type="RETRIEVAL_QUERY"
+        )
+        query_embedding = embed_response['embedding']
+    except Exception as e:
+        print(f"Embedding generation failed: {e}")
+        return []
 
-    pinecone_results = pinecone_index.query(
-        vector=query_embedding,
-        top_k=top_k,
-        include_metadata=False 
-    )
+    # 2. Build metadata filter for Pinecone query
+    metadata_filter = {"city": city.lower()}
+    if category:
+        metadata_filter["category"] = category.lower()
+
+    # 3. Query Pinecone with vector + metadata filter
+    try:
+        pinecone_results = pinecone_index.query(
+            vector=query_embedding,
+            top_k=top_k,
+            include_metadata=True,  # We want metadata for debugging or logic if needed
+            filter=metadata_filter
+        )
+    except Exception as e:
+        print(f"Pinecone query failed: {e}")
+        return []
 
     location_ids_to_fetch = set()
-    review_ids_map = {} 
-    
+    review_ids_map = {}
+
+    # 4. Parse results
     for match in pinecone_results.get('matches', []):
         try:
             location_id, review_index_str = match['id'].split('#')
             review_index = int(review_index_str)
-            
+
             location_ids_to_fetch.add(ObjectId(location_id))
             if location_id not in review_ids_map:
                 review_ids_map[location_id] = []
@@ -56,11 +78,12 @@ async def find_relevant_reviews_with_pinecone(query: str, top_k: int = 5) -> Lis
     if not location_ids_to_fetch:
         return []
 
+    # 5. Fetch full location docs from MongoDB
     location_collection = await get_location_collection()
     retrieved_reviews = []
-    
+
     cursor = location_collection.find({"_id": {"$in": list(location_ids_to_fetch)}})
-    
+
     async for location in cursor:
         loc_id_str = str(location['_id'])
         for index_to_get in review_ids_map.get(loc_id_str, []):
@@ -71,49 +94,67 @@ async def find_relevant_reviews_with_pinecone(query: str, top_k: int = 5) -> Lis
                     "review_text": review['text'],
                     "author": review.get('author', 'N/A')
                 })
-            except IndexError:
+            except (IndexError, KeyError):
                 continue
-                
+
     return retrieved_reviews
 
 async def generate_conversational_response(
-    user_query: str, 
-    city: str, 
-    chat_history: List[Dict[str, str]]
+    user_query: str,
+    city: str,
+    category: Optional[str] = None,
+    chat_history: List[Dict[str, str]] = []
 ) -> dict:
 
-    context_reviews = await find_relevant_reviews_with_pinecone(query=f"{user_query} in {city}")
+    context_reviews = await find_relevant_reviews_with_pinecone(
+        query=f"{user_query} in {city}",
+        city=city,
+        category=category,
+        top_k=10
+    )
 
+    # 2. Construct system prompt
     system_prompt = f"""
-                        You are 'Vibe Navigator', a friendly, witty, and super knowledgeable friend who knows the city of {city} inside out.
-                        Your personality is casual, a bit poetic, and very enthusiastic.
-                        Your main goal is to help the user plan a great day out by recommending spots in a fun, storytelling format.
+        You are 'Vibe Navigator', a friendly, witty, and super knowledgeable friend who knows the city of {city} inside out.
+        Your personality is casual, a bit poetic, and very enthusiastic.
+        Your main goal is to help the user plan a great day out by recommending spots in a fun, storytelling format.
 
-                        **Your Instructions:**
-                        1.  Use the chat history to understand the context of the conversation.
-                        2.  Use the "Retrieved Evidence" from real user reviews as the factual basis for your recommendations. NEVER make up details about a place.
-                        3.  If you make a recommendation, subtly weave in quotes or paraphrased points from the evidence.
-                        4.  If the user asks a follow-up question, answer it based on the history and new evidence if available.
-                        5.  Keep your responses conversational and engaging. Avoid just listing facts.
-                    """
-    
+        **Your Instructions:**
+        1. Use the chat history to understand the context of the conversation.
+        2. Use the "Retrieved Evidence" from real user reviews as the factual basis for your recommendations. NEVER make up details about a place.
+        3. If you make a recommendation, subtly weave in quotes or paraphrased points from the evidence.
+        4. If the user asks a follow-up question, answer it based on the history and new evidence if available.
+        5. Keep your responses conversational and engaging. Avoid just listing facts.
+    """
+
+    # 3. Prepare evidence prompt
     if context_reviews:
-        evidence_str = "\n".join([f"- From a review for '{r['location_name']}': \"{r['review_text']}\"" for r in context_reviews])
+        evidence_str = "\n".join(
+            [f"- From a review for '{r['location_name']}': \"{r['review_text']}\"" for r in context_reviews]
+        )
         evidence_prompt = f"\n\n**Retrieved Evidence to use for your response:**\n{evidence_str}"
     else:
         evidence_prompt = "\n\n**Retrieved Evidence:**\nNo specific reviews found for this query. Rely on the chat history or general knowledge, but state that you couldn't find a specific vibe."
 
     full_prompt = system_prompt + evidence_prompt
-    
-    model = genai.GenerativeModel(GENERATION_MODEL, system_instruction=full_prompt)
-    chat_session = model.start_chat(history=chat_history)
-    
-    response = await chat_session.send_message_async(user_query)
-    
+
+    # 4. Initialize Gemini model with system prompt for grounded generation
+    try:
+        model = genai.GenerativeModel(GENERATION_MODEL, system_instruction=full_prompt)
+        chat_session = model.start_chat(history=chat_history)
+        response = await chat_session.send_message_async(user_query)
+    except Exception as e:
+        print(f"Gemini generation failed: {e}")
+        return {
+            "reply": "Sorry, I couldn't generate a response at this time.",
+            "sources": context_reviews
+        }
+
     return {
         "reply": response.text,
         "sources": context_reviews
     }
+
 
 async def generate_tour_plan(city: str, vibe_tags: List[str]) -> dict:
 
@@ -126,7 +167,7 @@ async def generate_tour_plan(city: str, vibe_tags: List[str]) -> dict:
         query = f"A place in {city} with a '{tag}' vibe"
         print(f"  > Retrieving candidates for vibe: '{tag}'")
         
-        reviews = await find_relevant_reviews_with_pinecone(query=query, top_k=3)
+        reviews = await find_relevant_reviews_with_pinecone(query=query, city=city, top_k=10)
         all_source_reviews.extend(reviews)
         
         for review in reviews:
@@ -140,25 +181,34 @@ async def generate_tour_plan(city: str, vibe_tags: List[str]) -> dict:
     ingredients_str = "\n".join([f"- **{name}**: {reason}" for name, reason in candidate_locations.items()])
 
     prompt = f"""
-You are 'Vibe Navigator', an expert city tour guide for {city}. Your personality is enthusiastic, creative, and a little poetic.
-Your task is to create a personalized, story-driven tour plan for a user based on their desired vibes and a list of potential locations.
+You are 'Vibe Navigator', a warm and enthusiastic AI city tour concierge who crafts personalized, story-driven day plans. Your personality is friendly, creative, and a bit poetic — like a passionate local friend who knows the city inside out.
 
-**User's Desired Vibes:** {', '.join(vibe_tags)}
+Users will select vibe tags like “aesthetic,” “quiet,” “lively,” or “nature-filled” to customize their experience. Your job is to weave those vibes into a compelling, natural narrative tour plan that flows through the day.
 
-**Potential Locations (Your Ingredients):**
+**User's Selected Vibes:** {', '.join(vibe_tags)}
+
+**Available Locations to Choose From (Your Ingredients):**
 {ingredients_str}
 
-**Your Mission:**
-1.  **Create a Narrative:** Do not just list the places. Weave them into a coherent and exciting day plan (e.g., "Start your morning at...", "For lunch, wander over to...", "As evening approaches...").
-2.  **Use the Ingredients:** You MUST use at least 2-3 of the provided locations in your plan. You can decide the best order.
-3.  **Justify Your Choices:** When you recommend a place, briefly mention *why* it fits the vibe, using the information provided.
-4.  **Be Creative:** If the vibes are "Quiet" and "Lively", create a plan that balances both.
-5.  **Keep it Conversational:** Write as if you're excitedly telling a friend about this plan.
+**How to Craft the Tour Plan:**
 
-Now, generate the tour plan.
+1. **Tell a Story:** Don’t just list locations — create a vivid, engaging journey through the city. For example:  
+   - “Start your morning soaking in the aesthetic charm of...”  
+   - “For lunch, find a quiet spot at...”  
+   - “As evening falls, feel the lively buzz of...”
+
+2. **Use the Ingredients:** Include at least 2-3 of the provided locations. Decide the best order to keep the narrative exciting and balanced.
+
+3. **Ground Your Recommendations:** For every spot you mention, weave in insights from real user reviews — quoting or paraphrasing them naturally to back up your suggestions.
+
+4. **Balance the Vibes:** If the selected vibes contrast (e.g., “quiet” and “lively”), create a plan that artfully balances those moods throughout the day.
+
+5. **Keep it Conversational:** Write as if you’re excitedly sharing a personalized itinerary with a friend — casual, upbeat, and warm.
+
+Your goal is to be the perfect GenAI concierge, blending creativity with authentic, review-backed recommendations to help users discover their perfect city vibe.
+
+Now, please generate the personalized tour plan based on the above instructions.
 """
-
-
     model = genai.GenerativeModel(GENERATION_MODEL)
     response = await model.generate_content_async(prompt)
     unique_sources = list({v['review_text']:v for v in all_source_reviews}.values())

@@ -3,10 +3,10 @@ from pinecone import Pinecone, ServerlessSpec
 from dotenv import load_dotenv
 
 load_dotenv()
-PINECONE_API_KEY = "pcsk_ZiKWB_3uDnGmhzaPaeDVijA7jLe6LiyahFfffkoqu3gEWRQGjffiaGfwiYordzc4rnKQd"
+PINECONE_API_KEY = "pcsk_4QMrL2_6ffkiZM5BvFEKhDbZrW2CbyvhHmVJAmQK7HZqGRJmkbAzJrTNZHMmyso7SGpWhW"
 print(PINECONE_API_KEY)
 PINECONE_ENVIRONMENT = "df"
-PINECONE_INDEX_NAME = "vibe-navigator" # Let's name our index
+PINECONE_INDEX_NAME = "vibe-navigator" 
 
 def create_pinecone_index():
     """

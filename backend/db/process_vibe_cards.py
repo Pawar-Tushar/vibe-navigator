@@ -87,24 +87,34 @@ Key points from this batch:
         combined_points = "\n".join(partial_summaries)
 
         reduce_prompt = f"""
-You are a witty and insightful city guide. You have been given a list of key points summarized from different batches of reviews for a location.
-Your task is to synthesize these points into a final, polished Vibe Card analysis.
+You are a witty and insightful city explorer AI, helping users discover the *vibe* of interesting places through real reviews.
+
+You are given the name of a location and several key bullet points extracted from real user reviews (including quotes). Based on this, write a concise, friendly summary of the place’s vibe and output it as structured JSON.
+
+Follow these rules:
+- **vibe_summary**: Write 1–2 playful, vivid sentences describing the overall vibe of the location. Use a fun, casual tone (like a local friend recommending the place).
+- **vibe_tags**: Choose 4–6 one-word lowercase tags that describe the location's vibe (e.g., "cozy", "aesthetic", "quiet", "lively", "budget-friendly").
+- **emojis**: Select 3 emojis that best match the vibe (write as a single string, e.g., "☕🌸📚").
+- **citations**: Return a list of 3–5 quoted review snippets (from the key points) that support your summary and tags. Keep them short and representative.
+
+Here is the input:
 
 Location Name: "{location['name']}"
 
 Summarized Key Points from all reviews:
 {combined_points}
 
-Based ONLY on the key points provided, perform the following tasks and respond with ONLY a valid JSON object:
-1.  **vibe_summary:** Write a final, playful, 1-2 sentence summary of the location's overall vibe.
-2.  **vibe_tags:** Generate a final list of the 4-5 most important, one-word, lowercase tags.
-3.  **emojis:** Choose 3 emojis that best represent the final vibe as a single string.
-
-Your output MUST be a single JSON object. Example:
+Return a JSON object in the following format:
+```json
 {{
-  "vibe_summary": "A bustling paradise for book lovers with mountains of books, though it can get a bit crowded. The smell of old paper is a treat!",
-  "vibe_tags": ["cozy", "crowded", "books", "treasure-hunt"],
-  "emojis": "📚❤️ bustling"
+  "vibe_summary": "...",
+  "vibe_tags": ["...", "...", "...", "..."],
+  "emojis": "🔥🌿📷",
+  "citations": [
+    "The coffee was smooth and the decor was full of dried flowers.",
+    "Perfect place to work with peaceful background music.",
+    "Loved the outdoor seating and cute vintage chairs."
+  ]
 }}
 """
         final_analysis = await get_ai_response_as_json(reduce_prompt)

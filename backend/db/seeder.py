@@ -10,7 +10,7 @@ load_dotenv(dotenv_path='../.env')
 MONGO_DB_URL = os.getenv("MONGO_DB_URL")
 from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
-JSON_FILE_PATH = BASE_DIR / "scraper" / "seed_data.json"
+JSON_FILE_PATH = BASE_DIR / "scraper" / "data.json"
 async def seed_database():
     """
     Connects to MongoDB, clears the existing 'locations' collection,

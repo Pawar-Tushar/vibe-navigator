@@ -11,32 +11,27 @@ router = APIRouter(
     tags=["Vibe Navigator"]
 )
 
+
 @router.get("/locations", response_model=List[Location])
 async def get_locations_by_city_and_category(
-    background_tasks: BackgroundTasks, 
     city: str = Query(..., description="City to search in, e.g., 'pune'"),
     category: str = Query(..., description="Category of the place, e.g., 'cafe'")
 ):
-
     location_collection = await get_location_collection()
-    db_query = {"city": city.lower(), "category": category.lower()}
-    
-    db_query["processing_status"] = "indexed"
-    
+    db_query = {
+        "city": city.lower(),
+        "category": category.lower()
+    }
+
     locations_cursor = location_collection.find(db_query).limit(50)
     results = await locations_cursor.to_list(length=50)
 
     if results:
-        print(f"Found {len(results)} cached and indexed locations for {city}/{category}.")
+        print(f"Found {len(results)} cached locations for {city}/{category}.")
         return results
     else:
-        print(f"No cached data for {city}/{category}. Triggering background scrape and processing pipeline.")
-        search_query = f"{category} in {city}"
-        
-        background_tasks.add_task(scrape_and_populate_db, search_query, city, category, background_tasks)
-        
+        print(f"No cached data for {city}/{category}. Returning empty list.")
         return []
-
 
 @router.post("/agent/chat", response_model=VibeAgentResponse)
 async def chat_with_vibe_agent(request: VibeAgentRequest = Body(...)):
