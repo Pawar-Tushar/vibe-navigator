@@ -8,23 +8,18 @@ from bson import ObjectId
 
 load_dotenv()
 
-# --- Config ---
 MONGO_DB_URL = os.getenv("MONGO_DB_URL")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")  # Store in .env for safety
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_INDEX_NAME = "vibe-navigator"
 EMBEDDING_MODEL = "models/embedding-001"
 
-# --- Initialize Clients ---
 genai.configure(api_key=GEMINI_API_KEY)
 pc = Pinecone(api_key=PINECONE_API_KEY)
 pinecone_index = pc.Index(PINECONE_INDEX_NAME)
 
 async def embed_and_index():
-    """
-    Reads reviews from MongoDB, generates embeddings, attaches metadata,
-    and upserts them into Pinecone — RAG ready.
-    """
+
     mongo_client = motor.motor_asyncio.AsyncIOMotorClient(MONGO_DB_URL)
     collection = mongo_client.vibe_navigator.locations
 
@@ -90,16 +85,15 @@ async def embed_and_index():
                 pinecone_vectors.append({
                     "id": item["id"],
                     "values": embeddings[j],
-                    "metadata": item["metadata"]  # 🔥 Attached metadata
+                    "metadata": item["metadata"]  
                 })
 
             pinecone_index.upsert(vectors=pinecone_vectors)
-            print(f"  ✅ Upserted batch {i//batch_size + 1}")
+            print(f"   Upserted batch {i//batch_size + 1}")
 
         except Exception as e:
-            print(f"❌ Embedding failed for batch {i//batch_size + 1}: {e}")
+            print(f" Embedding failed for batch {i//batch_size + 1}: {e}")
 
-    # ✅ Re-ranking is not done here directly — it's used at query time (explained below)
     stats = pinecone_index.describe_index_stats()
     print("🎉 Indexing complete. Total vectors:", stats["total_vector_count"])
 

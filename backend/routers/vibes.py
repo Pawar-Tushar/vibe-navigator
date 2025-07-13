@@ -1,10 +1,9 @@
-from fastapi import APIRouter, HTTPException, Query, Body, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Query, Body
 from typing import List
 from models.place import Location, VibeAgentRequest, VibeAgentResponse, TourPlannerRequest
 
 from db.mongo import get_location_collection
 from services import gemini_rag 
-from services.on_demand_scraper import scrape_and_populate_db 
 
 router = APIRouter(
     prefix="/vibes",

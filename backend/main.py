@@ -28,6 +28,6 @@ async def shutdown_event():
 
 app.include_router(vibe_router)
 
-@app.get("/", tags=["Health Check"])
+@app.api_route("/", methods=["GET", "HEAD"], tags=["Health Check"])
 async def read_root():
     return {"status": "Vibe Navigator API is vibing!"}

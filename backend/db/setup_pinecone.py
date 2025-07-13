@@ -3,39 +3,35 @@ from pinecone import Pinecone, ServerlessSpec
 from dotenv import load_dotenv
 
 load_dotenv()
-PINECONE_API_KEY = "pcsk_4QMrL2_6ffkiZM5BvFEKhDbZrW2CbyvhHmVJAmQK7HZqGRJmkbAzJrTNZHMmyso7SGpWhW"
-print(PINECONE_API_KEY)
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
+# print(PINECONE_API_KEY)
 PINECONE_ENVIRONMENT = "df"
 PINECONE_INDEX_NAME = "vibe-navigator" 
 
 def create_pinecone_index():
-    """
-    Connects to Pinecone and creates a new index if it doesn't already exist.
-    """
+
     if not all([PINECONE_API_KEY, PINECONE_ENVIRONMENT]):
         print("ERROR: Pinecone API Key or Environment not found in .env file.")
         return
         
     pc = Pinecone(api_key=PINECONE_API_KEY)
 
-    # Check if the index already exists
     if PINECONE_INDEX_NAME in pc.list_indexes().names():
-        print(f"🌲 Pinecone index '{PINECONE_INDEX_NAME}' already exists. No action needed.")
+        print(f" Pinecone index '{PINECONE_INDEX_NAME}' already exists. No action needed.")
         return
 
-    print(f"🌲 Creating Pinecone index '{PINECONE_INDEX_NAME}'...")
+    print(f" Creating Pinecone index '{PINECONE_INDEX_NAME}'...")
     
-    # Create the index
     pc.create_index(
         name=PINECONE_INDEX_NAME,
-        dimension=768,  # This MUST match your embedding model's dimensions (Gemini's is 768)
-        metric='cosine', # Cosine similarity is best for text embeddings
+        dimension=768,  
+        metric='cosine', 
         spec=ServerlessSpec(
-            cloud='aws', # Or 'gcp'. Choose one.
-            region='us-east-1' # Choose a region.
+            cloud='aws',
+            region='us-east-1' 
         )
     )
-    print("✅ Pinecone index created successfully.")
+    print(" Pinecone index created successfully.")
 
 if __name__ == "__main__":
     create_pinecone_index()

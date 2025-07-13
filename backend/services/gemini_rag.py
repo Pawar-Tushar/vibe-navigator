@@ -30,7 +30,6 @@ async def find_relevant_reviews_with_pinecone(
     top_k: int = 5
 ) -> List[Dict]:
 
-    # 1. Embed the user query with Gemini
     try:
         embed_response = genai.embed_content(
             model=EMBEDDING_MODEL,
@@ -42,17 +41,15 @@ async def find_relevant_reviews_with_pinecone(
         print(f"Embedding generation failed: {e}")
         return []
 
-    # 2. Build metadata filter for Pinecone query
     metadata_filter = {"city": city.lower()}
     if category:
         metadata_filter["category"] = category.lower()
 
-    # 3. Query Pinecone with vector + metadata filter
     try:
         pinecone_results = pinecone_index.query(
             vector=query_embedding,
             top_k=top_k,
-            include_metadata=True,  # We want metadata for debugging or logic if needed
+            include_metadata=True, 
             filter=metadata_filter
         )
     except Exception as e:
@@ -62,7 +59,6 @@ async def find_relevant_reviews_with_pinecone(
     location_ids_to_fetch = set()
     review_ids_map = {}
 
-    # 4. Parse results
     for match in pinecone_results.get('matches', []):
         try:
             location_id, review_index_str = match['id'].split('#')
@@ -78,7 +74,6 @@ async def find_relevant_reviews_with_pinecone(
     if not location_ids_to_fetch:
         return []
 
-    # 5. Fetch full location docs from MongoDB
     location_collection = await get_location_collection()
     retrieved_reviews = []
 
@@ -113,7 +108,6 @@ async def generate_conversational_response(
         top_k=10
     )
 
-    # 2. Construct system prompt
     system_prompt = f"""
         You are 'Vibe Navigator', a friendly, witty, and super knowledgeable friend who knows the city of {city} inside out.
         Your personality is casual, a bit poetic, and very enthusiastic.
@@ -127,7 +121,6 @@ async def generate_conversational_response(
         5. Keep your responses conversational and engaging. Avoid just listing facts.
     """
 
-    # 3. Prepare evidence prompt
     if context_reviews:
         evidence_str = "\n".join(
             [f"- From a review for '{r['location_name']}': \"{r['review_text']}\"" for r in context_reviews]
@@ -138,7 +131,6 @@ async def generate_conversational_response(
 
     full_prompt = system_prompt + evidence_prompt
 
-    # 4. Initialize Gemini model with system prompt for grounded generation
     try:
         model = genai.GenerativeModel(GENERATION_MODEL, system_instruction=full_prompt)
         chat_session = model.start_chat(history=chat_history)
@@ -181,34 +173,34 @@ async def generate_tour_plan(city: str, vibe_tags: List[str]) -> dict:
     ingredients_str = "\n".join([f"- **{name}**: {reason}" for name, reason in candidate_locations.items()])
 
     prompt = f"""
-You are 'Vibe Navigator', a warm and enthusiastic AI city tour concierge who crafts personalized, story-driven day plans. Your personality is friendly, creative, and a bit poetic — like a passionate local friend who knows the city inside out.
+            You are 'Vibe Navigator', a warm and enthusiastic AI city tour concierge who crafts personalized, story-driven day plans. Your personality is friendly, creative, and a bit poetic — like a passionate local friend who knows the city inside out.
 
-Users will select vibe tags like “aesthetic,” “quiet,” “lively,” or “nature-filled” to customize their experience. Your job is to weave those vibes into a compelling, natural narrative tour plan that flows through the day.
+            Users will select vibe tags like “aesthetic,” “quiet,” “lively,” or “nature-filled” to customize their experience. Your job is to weave those vibes into a compelling, natural narrative tour plan that flows through the day.
 
-**User's Selected Vibes:** {', '.join(vibe_tags)}
+            **User's Selected Vibes:** {', '.join(vibe_tags)}
 
-**Available Locations to Choose From (Your Ingredients):**
-{ingredients_str}
+            **Available Locations to Choose From (Your Ingredients):**
+            {ingredients_str}
 
-**How to Craft the Tour Plan:**
+            **How to Craft the Tour Plan:**
 
-1. **Tell a Story:** Don’t just list locations — create a vivid, engaging journey through the city. For example:  
-   - “Start your morning soaking in the aesthetic charm of...”  
-   - “For lunch, find a quiet spot at...”  
-   - “As evening falls, feel the lively buzz of...”
+            1. **Tell a Story:** Don’t just list locations — create a vivid, engaging journey through the city. For example:  
+            - “Start your morning soaking in the aesthetic charm of...”  
+            - “For lunch, find a quiet spot at...”  
+            - “As evening falls, feel the lively buzz of...”
 
-2. **Use the Ingredients:** Include at least 2-3 of the provided locations. Decide the best order to keep the narrative exciting and balanced.
+            2. **Use the Ingredients:** Include at least 2-3 of the provided locations. Decide the best order to keep the narrative exciting and balanced.
 
-3. **Ground Your Recommendations:** For every spot you mention, weave in insights from real user reviews — quoting or paraphrasing them naturally to back up your suggestions.
+            3. **Ground Your Recommendations:** For every spot you mention, weave in insights from real user reviews — quoting or paraphrasing them naturally to back up your suggestions.
 
-4. **Balance the Vibes:** If the selected vibes contrast (e.g., “quiet” and “lively”), create a plan that artfully balances those moods throughout the day.
+            4. **Balance the Vibes:** If the selected vibes contrast (e.g., “quiet” and “lively”), create a plan that artfully balances those moods throughout the day.
 
-5. **Keep it Conversational:** Write as if you’re excitedly sharing a personalized itinerary with a friend — casual, upbeat, and warm.
+            5. **Keep it Conversational:** Write as if you’re excitedly sharing a personalized itinerary with a friend — casual, upbeat, and warm.
 
-Your goal is to be the perfect GenAI concierge, blending creativity with authentic, review-backed recommendations to help users discover their perfect city vibe.
+            Your goal is to be the perfect GenAI concierge, blending creativity with authentic, review-backed recommendations to help users discover their perfect city vibe.
 
-Now, please generate the personalized tour plan based on the above instructions.
-"""
+            Now, please generate the personalized tour plan based on the above instructions.
+            """
     model = genai.GenerativeModel(GENERATION_MODEL)
     response = await model.generate_content_async(prompt)
     unique_sources = list({v['review_text']:v for v in all_source_reviews}.values())

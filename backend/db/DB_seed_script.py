@@ -4,7 +4,6 @@ import os
 import asyncio
 from dotenv import load_dotenv
 
-# This ensures we can load the .env file from the backend directory
 load_dotenv(dotenv_path='../.env')
 
 MONGO_DB_URL = os.getenv("MONGO_DB_URL")
@@ -12,18 +11,15 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 JSON_FILE_PATH = BASE_DIR / "scraper" / "data.json"
 async def seed_database():
-    """
-    Connects to MongoDB, clears the existing 'locations' collection,
-    and loads fresh data from the specified JSON file.
-    """
+
     if not MONGO_DB_URL:
         print("ERROR: MONGO_DB_URL not found in .env file.")
         return
 
     print("Connecting to MongoDB...")
     client = motor.motor_asyncio.AsyncIOMotorClient(MONGO_DB_URL)
-    db = client.vibe_navigator # Database name is 'vibe_navigator'
-    collection = db.locations   # Collection name is 'locations'
+    db = client.vibe_navigator 
+    collection = db.locations  
 
     print(f"Clearing existing data from '{collection.name}' collection...")
     await collection.delete_many({})
