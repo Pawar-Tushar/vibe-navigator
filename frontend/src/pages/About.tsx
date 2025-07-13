@@ -201,21 +201,21 @@ const About = () => {
           
           <div className="flex flex-wrap justify-center gap-4 pt-4">
             <a 
-              href="mailto:hello@vibenavigator.com" 
+              href="mailto:tusharpawar749963@gmail.com" 
               className="inline-flex items-center gap-2 bg-slate-800 text-white px-6 py-3 rounded-full hover:bg-slate-700 transition-colors"
             >
               <Mail className="w-4 h-4" />
               Get in Touch
             </a>
             <a 
-              href="#" 
+              href="https://github.com/Pawar-Tushar/vibe-navigator" 
               className="inline-flex items-center gap-2 bg-white text-slate-800 border border-slate-300 px-6 py-3 rounded-full hover:bg-slate-50 transition-colors"
             >
               <Github className="w-4 h-4" />
               View Source
             </a>
             <a 
-              href="#" 
+              href="https://www.linkedin.com/in/tushar-pawar74/" 
               className="inline-flex items-center gap-2 bg-white text-slate-800 border border-slate-300 px-6 py-3 rounded-full hover:bg-slate-50 transition-colors"
             >
               <Linkedin className="w-4 h-4" />

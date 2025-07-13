@@ -45,7 +45,7 @@ export const Footer = () => {
             <h4 className="text-white font-semibold mb-4">Explore</h4>
             <ul className="space-y-3">
               <li>
-                <a href="/search" className="hover:text-cyan-400 transition-colors">
+                <a href="/" className="hover:text-cyan-400 transition-colors">
                   Search Places
                 </a>
               </li>
@@ -55,15 +55,11 @@ export const Footer = () => {
                 </a>
               </li>
               <li>
-                <a href="#" className="hover:text-cyan-400 transition-colors">
-                  Popular Vibes
+                <a href="/about" className="hover:text-cyan-400 transition-colors">
+                About Us
                 </a>
               </li>
-              <li>
-                <a href="#" className="hover:text-cyan-400 transition-colors">
-                  City Guides
-                </a>
-              </li>
+
             </ul>
           </div>
 
@@ -83,14 +79,10 @@ export const Footer = () => {
               </li>
               <li>
                 <a href="#" className="hover:text-cyan-400 transition-colors">
-                  Privacy Policy
+                  Trust Policy
                 </a>
               </li>
-              <li>
-                <a href="#" className="hover:text-cyan-400 transition-colors">
-                  Terms of Service
-                </a>
-              </li>
+
             </ul>
           </div>
         </div>

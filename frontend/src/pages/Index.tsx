@@ -16,6 +16,15 @@ const Index = () => {
   const [retryTimer, setRetryTimer] = useState<number | null>(null);
    const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const TARGET_CITIES = {
+    "pune": {"categories": ["cafes", "parks", "bars", "bookstores", "historic places", "restaurants"]},
+    "mumbai": {"categories": ["cafes", "parks", "bars", "bookstores", "historic places", "beach"]},
+    "bangalore": {"categories": ["cafes", "parks", "bars", "bookstores", "historic places"]},
+    "delhi": {"categories": ["cafes", "parks", "bars", "bookstores", "historic places"]},
+    "noida": {"categories": ["cafes", "parks", "bars", "bookstores", "historic places"]},
+    "goa": {"categories": ["cafes", "parks", "bars", "bookstores", "historic places", "beach"]},
+}
+
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +60,7 @@ const Index = () => {
 
   const handleCloseDialog = () => {
     setShowDialog(false);
+     setIsLoading(false);
     if (retryTimer) {
       clearTimeout(retryTimer);
       setRetryTimer(null);
@@ -68,24 +78,37 @@ const Index = () => {
       <HowItWorksSection />
       <CTASection />
       <Footer/>
-      <Dialog open={showDialog} onOpenChange={handleCloseDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>🚧 Data Not Found</DialogTitle>
-          </DialogHeader>
-          <div className="text-slate-600">
+    <Dialog open={showDialog} onOpenChange={handleCloseDialog}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>🚧 Data Not Found</DialogTitle>
+        </DialogHeader>
+        <div className="text-slate-600 space-y-4">
+          <p>
             Sorry for the inconvenience! Our AI heroes are currently fetching the latest locations just for you.
+          </p>
+
+          <p>
+            <strong>Note:</strong> This is an <strong>MVP prototype</strong>. We currently support only a limited set of cities and categories while we build out the full experience.
+          </p>
+
+          <div className="text-sm bg-slate-100 p-3 rounded-md border border-slate-300">
+            <strong>Available cities:</strong> Pune, Mumbai, Bangalore, Delhi, Noida, Goa
             <br />
-            <br />
-            Please check back in about <strong>5 minutes</strong>, or explore our other features in the meantime!
+            <strong>Categories:</strong> Cafes, Parks, Bars, Bookstores, Historic Places{'\u00a0'}{TARGET_CITIES.goa.categories.includes("beach") && ", Beach"}
           </div>
-          <DialogFooter>
-            <Button onClick={handleCloseDialog} variant="outline">
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
+          <p>
+            Please check back in about <strong>5 minutes</strong>, or explore our other features in the meantime!
+          </p>
+        </div>
+        <DialogFooter>
+          <Button onClick={handleCloseDialog} variant="outline">
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     </div>
   );
 };

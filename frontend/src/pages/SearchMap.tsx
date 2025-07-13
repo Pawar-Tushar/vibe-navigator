@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, Marker } from "react-leaflet";
 import { Icon } from "leaflet";
 import { ArrowLeft, Grid, Filter } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { fetchLocations } from "@/api/app.api";
 import "leaflet/dist/leaflet.css";
+import LocationDialog from "@/components/LocationDialog";
 
 const customIcon = new Icon({
   iconUrl: "https://unpkg.com/leaflet@1.9.3/dist/images/marker-icon.png",
@@ -21,6 +22,7 @@ export default function SearchMap() {
   const [selectedPlace, setSelectedPlace] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
   const [vibeFilters, setVibeFilters] = useState<string[]>([]);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const query = searchParams.get("q") || "";
 
@@ -39,16 +41,18 @@ export default function SearchMap() {
           id: item._id,
           name: item.name,
           location: item.address || item.city,
+          address: item.address,
+          city: item.city,
           coordinates: item.coordinates,
           rating: item.rating || (Math.random() * 1.5 + 3.5).toFixed(1),
           vibes: item.ai_analysis?.emojis?.split(" ") || [],
           tags: item.ai_analysis?.vibe_tags || [],
           summary: item.ai_analysis?.vibe_summary || "No description available.",
+          raw_reviews: item.raw_reviews || [],
         }));
 
         setResults(transformed);
 
-        // Extract all unique vibes
         const allVibes = [...new Set(transformed.flatMap((item) => item.tags || []))];
         setVibeFilters(allVibes);
       } catch (err) {
@@ -74,11 +78,14 @@ export default function SearchMap() {
 
   const center = filteredResults[0]?.coordinates
     ? [filteredResults[0].coordinates.lat, filteredResults[0].coordinates.lon]
-    : [18.5204, 73.8567]; // default to Pune
+    : [18.5204, 73.8567];
+
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Header */}
       <div className="bg-white border-b sticky top-0 z-40 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -89,7 +96,7 @@ export default function SearchMap() {
             <Link to={`/search?q=${query}`}>
               <Button variant="outline" size="sm" className="rounded-full">
                 <Grid className="w-4 h-4 mr-1" />
-                Grid
+                View On Grid
               </Button>
             </Link>
           </div>
@@ -119,7 +126,6 @@ export default function SearchMap() {
         </div>
       </div>
 
-      {/* Map View */}
       <div className="relative h-[calc(100vh-120px)] max-w-6xl mx-auto">
         {loading ? (
           <p className="text-center text-slate-500 pt-10">Loading map...</p>
@@ -142,10 +148,12 @@ export default function SearchMap() {
           </MapContainer>
         )}
 
-        {/* Floating Info Card */}
         {selectedPlace && (
           <div className="absolute bottom-0 left-0 right-0 md:bottom-4 md:left-auto md:right-4 md:w-[340px] z-50">
-            <div className="bg-white shadow-xl rounded-t-2xl md:rounded-xl p-5 border border-slate-100">
+            <div
+              onClick={() => setIsDialogOpen(true)}
+              className="bg-white shadow-xl rounded-t-2xl md:rounded-xl p-5 border border-slate-100"
+            >
               <div className="flex justify-between items-start mb-2">
                 <h3 className="font-semibold text-lg text-slate-800">{selectedPlace.name}</h3>
                 <span className="bg-amber-100 text-amber-800 px-2 py-1 rounded-full text-sm font-medium">
@@ -177,7 +185,12 @@ export default function SearchMap() {
           </div>
         )}
       </div>
+
+      <LocationDialog
+        location={selectedPlace}
+        isOpen={isDialogOpen}
+        onClose={handleCloseDialog}
+      />
     </div>
-    
   );
 }

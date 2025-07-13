@@ -3,8 +3,27 @@ import { useSearchParams, Link } from "react-router-dom";
 import { ArrowLeft, Grid, Map, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { fetchLocations } from "@/api/app.api"; // ✅ Use your API call
-
+import { fetchLocations } from "@/api/app.api"; 
+import LocationDialog from "@/components/LocationDialog";
+interface LocationData {
+  id: string;
+  name: string;
+  location: string;
+  address?: string;
+  coordinates?: {
+    lat: number;
+    lon: number;
+  };
+  rating: string;
+  vibes: string[];
+  tags: string[];
+  summary: string;
+  raw_reviews?: Array<{
+    text: string;
+    source: string;
+    author: string;
+  }>;
+}
 
 export default function SearchResults() {
   const [searchParams] = useSearchParams();
@@ -14,7 +33,8 @@ export default function SearchResults() {
   const [loading, setLoading] = useState(false);
   const [vibeFilters, setVibeFilters] = useState<string[]>([]); 
   const query = searchParams.get('q') || '';
-
+const [selectedLocation, setSelectedLocation] = useState<LocationData | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 useEffect(() => {
   const fetchData = async () => {
     setLoading(true);
@@ -31,10 +51,12 @@ useEffect(() => {
         id: item._id,
         name: item.name,
         location: item.address || item.city,
+        city : item.city,
         rating: item.rating || (Math.random() * 1.5 + 3.5).toFixed(1),
         vibes: item.ai_analysis?.emojis?.split(' ') || [],
         tags: item.ai_analysis?.vibe_tags || [],
         summary: item.ai_analysis?.vibe_summary || "No description available.",
+        raw_reviews: item.raw_reviews || [],
       }));
 
       setResults(transformed);
@@ -71,6 +93,16 @@ useEffect(() => {
       )
     : results;
 
+  const handleCardClick = (location: LocationData) => {
+    setSelectedLocation(location);
+    setIsDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+    setSelectedLocation(null);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
@@ -83,19 +115,11 @@ useEffect(() => {
             </Link>
 
             <div className="flex items-center gap-2">
-              <Button
-                variant={viewMode === 'grid' ? 'default' : 'outline'}
-                onClick={() => setViewMode('grid')}
-                size="sm"
-                className="rounded-full"
-              >
-                <Grid className="w-4 h-4 mr-1" />
-                Grid
-              </Button>
+          
               <Link to={`/search-map?q=${query}`}>
               <Button variant="outline" size="sm" className="rounded-full">
                 <Map className="w-4 h-4 mr-1" />
-                Map
+                View on Map
               </Button>
             </Link>
             </div>
@@ -137,6 +161,7 @@ useEffect(() => {
                 key={result.id}
                 className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-6 animate-fade-in"
                 style={{ animationDelay: `${index * 0.2}s` }}
+                onClick={() => handleCardClick(result)}
               >
                 <div className="flex items-start justify-between mb-3">
                   <h3 className="font-bold text-slate-800 text-lg leading-tight">
@@ -197,6 +222,13 @@ useEffect(() => {
           </div>
         )}
       </div>
+      
+      {/* Location Dialog */}
+      <LocationDialog
+        location={selectedLocation}
+        isOpen={isDialogOpen}
+        onClose={handleCloseDialog}
+      />
     </div>
   );
 }

@@ -43,7 +43,7 @@ export const HeroSection = ({ searchQuery, setSearchQuery, onSearch, isLoading }
         </h1>
 
         <p className="text-slate-200 text-lg md:text-xl max-w-2xl mx-auto mb-8 leading-relaxed">
-          Go beyond ratings. Find places that match your mood—from quiet, aesthetic cafes to nature-filled parks.
+          Go beyond ratings. Find places that match your mood from quiet, aesthetic cafes to nature-filled parks.
           Let AI guide your adventure.
         </p>
 
@@ -78,12 +78,13 @@ export const HeroSection = ({ searchQuery, setSearchQuery, onSearch, isLoading }
 
         {/* Quick Suggestions */}
         <div className="flex flex-wrap justify-center gap-3 text-sm">
-          <span className="text-slate-300">Try:</span>
+          <span className="text-slate-300">Try This:</span>
           {[
             "🌳 Parks in Pune",
             "☕ Cafes in Mumbai",
             "🍸 Bars in Mumbai",
-            "📚 Bookstores in Bangalore"
+            "📚 Bookstores in Bangalore",
+            "🌊 Beach in Goa"
           ]
           .map((suggestion) => (
             <button
