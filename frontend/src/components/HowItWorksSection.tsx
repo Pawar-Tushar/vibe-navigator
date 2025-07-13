@@ -71,7 +71,7 @@ export const HowItWorksSection = () => {
         <div className="text-center">
             <p className="text-slate-600 text-base mb-6">⚠️ This is an MVP version with limited city and category support.{" "}</p>
           <Button
-            onClick={() => navigate("/docs")}
+            onClick={() => navigate("/about")}
             variant="outline"
             className="inline-flex items-center text-slate-700 hover:text-cyan-500 border border-slate-300 hover:border-cyan-500 transition-all duration-300"
           >
